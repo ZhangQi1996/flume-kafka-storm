@@ -1,0 +1,38 @@
+plugins {
+    id 'java'
+}
+
+group 'com.zq'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenLocal()
+    maven { url 'http://maven.aliyun.com/nexus/content/groups/public/' }
+    maven { url 'http://maven.aliyun.com/nexus/content/repositories/jcenter'}
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+
+    // https://mvnrepository.com/artifact/org.apache.storm/storm-core
+    compile group: 'org.apache.storm', name: 'storm-core', version: '2.1.0'
+
+
+    // https://mvnrepository.com/artifact/org.apache.storm/storm-kafka-client
+    compile group: 'org.apache.storm', name: 'storm-kafka-client', version: '1.2.3'
+
+    // https://mvnrepository.com/artifact/org.apache.kafka/kafka
+    compile group: 'org.apache.kafka', name: 'kafka_2.12', version: '1.1.1'
+
+    // https://mvnrepository.com/artifact/org.apache.flume/flume-ng-core
+    compile group: 'org.apache.flume', name: 'flume-ng-core', version: '1.9.0'
+
+    // https://mvnrepository.com/artifact/org.apache.flume.flume-ng-sources/flume-kafka-source
+    compile group: 'org.apache.flume.flume-ng-sources', name: 'flume-kafka-source', version: '1.9.0'
+
+    // https://mvnrepository.com/artifact/org.apache.flume.flume-ng-sinks/flume-ng-kafka-sink
+    compile group: 'org.apache.flume.flume-ng-sinks', name: 'flume-ng-kafka-sink', version: '1.9.0'
+}
