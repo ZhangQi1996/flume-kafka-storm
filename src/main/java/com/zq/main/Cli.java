@@ -17,7 +17,7 @@ public class Cli {
         cli.init("qc", 10000);
         try {
             for (int i = 1; i <= 10; i++) {
-                String sendMsg = info[Math.abs(random.nextInt()) % 2] + "AAA" + i;
+                String sendMsg = info[Math.abs(random.nextInt()) % 2] + "DAVID" + i;
                 cli.sendDataToFlume(sendMsg);
                 System.out.println(sendMsg);
             }

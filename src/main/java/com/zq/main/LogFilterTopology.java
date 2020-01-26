@@ -1,9 +1,7 @@
 package com.zq.main;
 
-import kafka.server.KafkaConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
@@ -12,7 +10,6 @@ import org.apache.storm.kafka.bolt.mapper.FieldNameBasedTupleToKafkaMapper;
 import org.apache.storm.kafka.spout.Func;
 import org.apache.storm.kafka.spout.KafkaSpout;
 import org.apache.storm.kafka.spout.KafkaSpoutConfig;
-import org.apache.storm.kafka.spout.KafkaSpoutRetryExponentialBackoff;
 import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.BasicOutputCollector;
@@ -30,7 +27,6 @@ import java.io.Writer;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.TimeUnit;
 
 public class LogFilterTopology {
     static class FilterBolt extends BaseBasicBolt {
@@ -55,11 +51,14 @@ public class LogFilterTopology {
 
         private static final String FILTERED_LOGS_FILE = "/root/filtered-logs.txt";
 
+        private OutputCollector collector;
+
         private Writer writer;
 
         @Override
         public void prepare(Map<String, Object> topoConf, TopologyContext context, OutputCollector collector) {
             try {
+                this.collector = collector;
                 writer = new FileWriter(FILTERED_LOGS_FILE, true);
             } catch (IOException e) {
                 throw new RuntimeException(e.getMessage());
@@ -72,7 +71,7 @@ public class LogFilterTopology {
                 String filteredLog = input.getStringByField("filtered-logs");
                 writer.write(filteredLog);
                 writer.flush();
-                System.err.println(filteredLog);
+                collector.ack(input);   // 由于本bolt中没有进行emit提交故需要ack。否则会重发
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -96,7 +95,11 @@ public class LogFilterTopology {
         KafkaSpoutConfig<String, String> conf = KafkaSpoutConfig
                 .builder("master:9092,slave1:9092", "flume-kafka-storm") // 你的kafka集群地址和topic
                 .setProp(ConsumerConfig.GROUP_ID_CONFIG, "consumer") // 设置消费者组，随便写
-                .setProp(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, 1024 * 1024 * 4) // 默认1m
+                .setProp(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")   //
+                .setProp(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 100) // 自动提交offset的间隔
+                .setProp(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true)
+                .setProp(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10) // 一次拉取的最大记录数
+//                .setProp(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG, 1024 * 1024 * 4) // 默认1m
                 // .setRecordTranslator(new MyRecordTranslator())
                 .setRecordTranslator( // 翻译函数，就是将消息过滤下，具体操作自己玩
                         new MyRecordTranslator(),
@@ -112,7 +115,7 @@ public class LogFilterTopology {
 //                )
                 .setOffsetCommitPeriodMs(10000)
                 .setFirstPollOffsetStrategy(KafkaSpoutConfig.FirstPollOffsetStrategy.LATEST) // 最新开始拉取
-                .setMaxUncommittedOffsets(250)
+                .setMaxUncommittedOffsets(10)
                 .build();
 
         TopologyBuilder builder = new TopologyBuilder();
